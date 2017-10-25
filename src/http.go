@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"io"
 	"net"
 	"net/http"
@@ -10,6 +11,8 @@ import (
 
 // Serve OpenDDNS server at a given port
 func Serve(port int) {
+	fmt.Printf("Serving on port %d", port)
+
 	http.HandleFunc("/ping", pingHandler)
 	http.ListenAndServe(":"+strconv.Itoa(port), nil)
 }
