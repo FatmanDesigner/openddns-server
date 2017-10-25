@@ -15,7 +15,7 @@ var entries []DNSEntry
 // Register an A Record entry
 // WARNING: transactional
 func Register(domainName string, ip string) bool {
-	fmt.Printf("Registering...\n")
+	fmt.Printf("Registering %s as %s...\n", ip, domainName)
 
 	for index := 0; index < len(entries); index++ {
 		if domainName == entries[index].domainName {
