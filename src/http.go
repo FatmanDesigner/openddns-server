@@ -9,8 +9,8 @@ import (
 	"strings"
 )
 
-// Serve OpenDDNS server at a given port
-func Serve(port int) {
+// HttpServe OpenDDNS server at a given port
+func HttpServe(port int) {
 	fmt.Printf("Serving on port %d", port)
 
 	http.HandleFunc("/ping", pingHandler)
