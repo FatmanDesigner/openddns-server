@@ -1,8 +1,8 @@
 package main
 
 import (
-	"fmt"
 	"io"
+	"log"
 	"net"
 	"net/http"
 	"strconv"
@@ -11,10 +11,14 @@ import (
 
 // HttpServe OpenDDNS server at a given port
 func HttpServe(port int) {
-	fmt.Printf("Serving on port %d", port)
+	log.Printf("Serving on port %d", port)
 
 	http.HandleFunc("/ping", pingHandler)
 	http.HandleFunc("/api/generate-secret", generateSecretHandler)
+
+	fs := http.FileServer(http.Dir("/Users/khanhhua/dev/project-openddns/open-ddns-server/web-ui/dist"))
+	http.Handle("/assets/", fs)
+	http.Handle("/", fs)
 
 	http.ListenAndServe(":"+strconv.Itoa(port), nil)
 }
