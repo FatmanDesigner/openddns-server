@@ -28,15 +28,14 @@ func GenerateApp(userID string) (appid string, secret string, ok bool) {
 	db, err = sql.Open("sqlite3", "../auth.db")
 	if err != nil {
 		ok = false
-		db.Close()
 
 		return
 	}
+	defer db.Close()
 	stmt, err = db.Prepare("INSERT INTO apps (appid, secret, user_id) VALUES (?, ?, ?)")
 
 	if err != nil {
 		ok = false
-		db.Close()
 
 		return
 	}
@@ -45,16 +44,12 @@ func GenerateApp(userID string) (appid string, secret string, ok bool) {
 	_, err = stmt.Exec(appid, secret, userID)
 
 	if err != nil {
-		fmt.Errorf(err.Error())
-
 		ok = false
-		db.Close()
 
 		return
 	}
 
 	ok = true
-	db.Close()
 	return
 }
 
@@ -81,20 +76,24 @@ func GenerateSecret(appid string) (secret string, ok bool) {
 	db, err = sql.Open("sqlite3", "../auth.db")
 	if err != nil {
 		ok = false
-		db.Close()
 
 		return
 	}
+	defer db.Close()
 
 	stmt, err = db.Prepare("UPDATE apps SET secret = ? WHERE appid = ?)")
 	if err != nil {
 		ok = false
-		db.Close()
 
 		return
 	}
 
 	_, err = stmt.Exec(secret, appid)
+	if err != nil {
+		ok = false
+
+		return
+	}
 
 	ok = true
 	return
