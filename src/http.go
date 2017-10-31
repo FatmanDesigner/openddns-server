@@ -14,6 +14,8 @@ func HttpServe(port int) {
 	fmt.Printf("Serving on port %d", port)
 
 	http.HandleFunc("/ping", pingHandler)
+	http.HandleFunc("/api/generate-secret", generateSecretHandler)
+
 	http.ListenAndServe(":"+strconv.Itoa(port), nil)
 }
 
@@ -65,5 +67,9 @@ func pingHandler(res http.ResponseWriter, req *http.Request) {
 	Register(domainName, ip.String())
 
 	res.WriteHeader(http.StatusOK)
+	io.WriteString(res, "OK")
+}
+
+func generateSecretHandler(res http.ResponseWriter, req *http.Request) {
 	io.WriteString(res, "OK")
 }
