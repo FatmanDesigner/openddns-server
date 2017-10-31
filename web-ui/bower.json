@@ -1,0 +1,6 @@
+{
+  "name": "web-ui",
+  "dependencies": {
+    "semantic-ui": "^2.2.13"
+  }
+}
