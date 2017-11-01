@@ -14,6 +14,7 @@ func InitDB(filepath string) *sql.DB {
 	var err error
 
 	if db, err = sql.Open("sqlite3", filepath); err != nil {
+		log.Printf("Could not open DB: %s\n", filepath)
 		return nil
 	}
 
@@ -27,6 +28,5 @@ func InitDB(filepath string) *sql.DB {
 		return nil
 	}
 
-	log.Printf("Could not open DB: %s\n", filepath)
-	return nil
+	return db
 }

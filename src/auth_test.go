@@ -5,8 +5,12 @@ import "testing"
 // GenerateApp generates new pair of appid and client secret
 
 func TestGenerateApp(t *testing.T) {
+	db := InitDB("file::memory:")
+	defer db.Close()
+	auth := &Auth{DB: db}
+
 	userID := "khanh"
-	appid, secret, ok := GenerateApp(userID)
+	appid, secret, ok := auth.GenerateApp(userID)
 
 	if !ok {
 		t.Error("Generate App should be OK")
@@ -22,14 +26,18 @@ func TestGenerateApp(t *testing.T) {
 }
 
 func TestGenerateSecret(t *testing.T) {
-	secretA, _ := GenerateSecret("itsalongappid")
+	db := InitDB("file::memory:")
+	defer db.Close()
+	auth := &Auth{DB: db}
+
+	secretA, _ := auth.GenerateSecret("itsalongappid")
 
 	if len(secretA) == 0 {
 		t.Error("secret should be non-empty")
 	}
 	t.Logf("Secret generated for \"itsalongappid\": %s", secretA)
 
-	secretB, _ := GenerateSecret("itsalongappid")
+	secretB, _ := auth.GenerateSecret("itsalongappid")
 
 	if len(secretB) == 0 {
 		t.Error("secret should be non-empty")
@@ -42,15 +50,19 @@ func TestGenerateSecret(t *testing.T) {
 }
 
 func TestAuthenticate(t *testing.T) {
+	db := InitDB("file::memory:")
+	defer db.Close()
+	auth := &Auth{DB: db}
+
 	userID := "khanh"
-	appid, secret, ok := GenerateApp(userID)
+	appid, secret, ok := auth.GenerateApp(userID)
 
 	if !ok {
 		t.Error("Generate App should be OK")
 	}
 
 	t.Logf("appid: %s, secret: %s", appid, secret)
-	storedUserID, ok := Authenticate(appid, secret)
+	storedUserID, ok := auth.Authenticate(appid, secret)
 
 	t.Logf("UserID: %s", storedUserID)
 	if !ok {

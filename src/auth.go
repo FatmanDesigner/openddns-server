@@ -14,27 +14,22 @@ import (
 	hashids "github.com/speps/go-hashids"
 )
 
+type Auth struct {
+	DB *sql.DB
+}
+
 // - appid is to be recorded in DNS TXT record openddns_appid=appid
 // - secret is to authorize IP changes
-func GenerateApp(userID string) (appid string, secret string, ok bool) {
+func (self *Auth) GenerateApp(userID string) (appid string, secret string, ok bool) {
 	log.Println("Generating appid and secret...")
 
+	db := self.DB
 	var err error
-	var db *sql.DB
 	var stmt *sql.Stmt
 
 	appid = hex.EncodeToString(uuid.NewV4().Bytes())
 	secret, ok = internalGenerateSecret(appid)
 
-	// Assign to a persisted user identified by userID
-	db, err = sql.Open("sqlite3", "../auth.db")
-	if err != nil {
-		ok = false
-		log.Println("Could not open ../auth.db")
-
-		return
-	}
-	defer db.Close()
 	stmt, err = db.Prepare("INSERT INTO apps (appid, secret, user_id) VALUES (?, ?, ?)")
 
 	if err != nil {
@@ -59,7 +54,7 @@ func GenerateApp(userID string) (appid string, secret string, ok bool) {
 }
 
 // GenerateSecret generates a random secret for every invocation
-func GenerateSecret(appid string) (secret string, ok bool) {
+func (self *Auth) GenerateSecret(appid string) (secret string, ok bool) {
 	secret, ok = internalGenerateSecret(appid)
 
 	if !ok {
@@ -67,15 +62,8 @@ func GenerateSecret(appid string) (secret string, ok bool) {
 	}
 
 	var err error
-	var db *sql.DB
+	var db *sql.DB = self.DB
 	var stmt *sql.Stmt
-
-	if db, err = sql.Open("sqlite3", "../auth.db"); err != nil {
-		log.Println("Could not open ../auth.db. " + err.Error())
-		ok = false
-		return
-	}
-	defer db.Close()
 
 	if stmt, err = db.Prepare("UPDATE apps SET secret = ? WHERE appid = ?"); err != nil {
 		log.Println("Could not prepare UPDATE statement. " + err.Error())
@@ -94,17 +82,11 @@ func GenerateSecret(appid string) (secret string, ok bool) {
 }
 
 // Authenticate authenticate appid to be modified using secret
-func Authenticate(appid string, secret string) (string, bool) {
+func (self *Auth) Authenticate(appid string, secret string) (string, bool) {
 	var userID string = ""
 	var err error
-	var db *sql.DB
+	var db *sql.DB = self.DB
 	var row *sql.Row
-
-	db, err = sql.Open("sqlite3", "../auth.db")
-	if err != nil {
-		return "", false
-	}
-	defer db.Close()
 
 	secretHashed := hex.EncodeToString(sha1.New().Sum([]byte(secret)))
 	row = db.QueryRow("SELECT user_id FROM apps WHERE appid = ? AND secret = ?", appid, secretHashed)
@@ -113,6 +95,7 @@ func Authenticate(appid string, secret string) (string, bool) {
 	if row != nil {
 		err = row.Scan(&scanned)
 		if err != nil {
+			log.Printf("Could not find user_id for appid = %s, secret = %s. %s", appid, secret, err.Error())
 			return "", false
 		}
 

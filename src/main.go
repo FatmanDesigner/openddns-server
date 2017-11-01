@@ -31,7 +31,9 @@ func main() {
 	wg.Add(2)
 
 	go func() {
-		HttpServe(httpPort)
+
+		server := &HttpServer{DB: db}
+		server.HttpServe(httpPort)
 		wg.Done()
 	}()
 	go func() {
