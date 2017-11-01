@@ -23,7 +23,7 @@ func GenerateApp(userID string) (appid string, secret string, ok bool) {
 	var stmt *sql.Stmt
 
 	appid = hex.EncodeToString(uuid.NewV4().Bytes())
-	secret, ok = GenerateSecret(appid)
+	secret, ok = internalGenerateSecret(appid)
 
 	// Assign to a persisted user identified by userID
 	db, err = sql.Open("sqlite3", "../auth.db")
@@ -59,21 +59,35 @@ func GenerateApp(userID string) (appid string, secret string, ok bool) {
 
 // GenerateSecret generates a random secret for every invocation
 func GenerateSecret(appid string) (secret string, ok bool) {
-	fmt.Printf("Generating secret for appid %s...\n", appid)
+	secret, ok = internalGenerateSecret(appid)
 
-	hd := hashids.NewData()
-	hd.Salt = appid
-	hd.MinLength = 16
-	h, _ := hashids.NewWithData(hd)
-
-	randomList := make([]int, 4)
-	for i := 0; i < 4; i++ {
-		randomList[i] = rand.Int()
+	if !ok {
+		return
 	}
 
-	secret, _ = h.Encode(randomList)
+	var err error
+	var db *sql.DB
+	var stmt *sql.Stmt
 
-	ok = true
+	if db, err = sql.Open("sqlite3", "../auth.db"); err != nil {
+		log.Println("Could not open ../auth.db. " + err.Error())
+		ok = false
+		return
+	}
+	defer db.Close()
+
+	if stmt, err = db.Prepare("UPDATE apps SET secret = ? WHERE appid = ?"); err != nil {
+		log.Println("Could not prepare UPDATE statement. " + err.Error())
+		ok = false
+		return
+	}
+
+	if _, err = stmt.Exec(secret, appid); err != nil {
+		log.Println("Could not execute UPDATE statement. " + err.Error())
+		ok = false
+		return
+	}
+
 	return
 }
 
@@ -103,4 +117,23 @@ func Authenticate(appid string, secret string) (string, bool) {
 	}
 
 	return userID, true
+}
+
+func internalGenerateSecret(appid string) (secret string, ok bool) {
+	fmt.Printf("Generating secret for appid %s...\n", appid)
+
+	hd := hashids.NewData()
+	hd.Salt = appid
+	hd.MinLength = 16
+	h, _ := hashids.NewWithData(hd)
+
+	randomList := make([]int, 4)
+	for i := 0; i < 4; i++ {
+		randomList[i] = rand.Int()
+	}
+
+	secret, _ = h.Encode(randomList)
+
+	ok = true
+	return
 }

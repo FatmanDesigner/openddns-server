@@ -27,12 +27,14 @@ func TestGenerateSecret(t *testing.T) {
 	if len(secretA) == 0 {
 		t.Error("secret should be non-empty")
 	}
+	t.Logf("Secret generated for \"itsalongappid\": %s", secretA)
 
 	secretB, _ := GenerateSecret("itsalongappid")
 
 	if len(secretB) == 0 {
 		t.Error("secret should be non-empty")
 	}
+	t.Logf("Secret generated for \"itsalongappid\": %s", secretB)
 
 	if secretA == secretB {
 		t.Error("secrets should not be the same")
