@@ -6,6 +6,8 @@ import (
 	"path"
 	"strconv"
 	"sync"
+
+	_ "github.com/joho/godotenv/autoload"
 )
 
 func main() {

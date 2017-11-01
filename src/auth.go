@@ -5,7 +5,6 @@ import (
 	"crypto/sha1"
 	"database/sql"
 	"encoding/hex"
-	"fmt"
 	"log"
 	"math/rand"
 
@@ -103,7 +102,7 @@ func (self *Auth) Authenticate(appid string, secret string) (string, bool) {
 }
 
 func internalGenerateSecret(appid string) (secret string, ok bool) {
-	fmt.Printf("Generating secret for appid %s...\n", appid)
+	log.Printf("Generating secret for appid %s...\n", appid)
 
 	hd := hashids.NewData()
 	hd.Salt = appid
