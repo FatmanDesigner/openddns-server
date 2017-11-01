@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"fmt"
+	"log"
 	"math/rand"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -15,19 +16,20 @@ import (
 // - appid is to be recorded in DNS TXT record openddns_appid=appid
 // - secret is to authorize IP changes
 func GenerateApp(userID string) (appid string, secret string, ok bool) {
-	fmt.Println("Generating appid and secret...")
+	log.Println("Generating appid and secret...")
 
 	var err error
 	var db *sql.DB
 	var stmt *sql.Stmt
 
 	appid = hex.EncodeToString(uuid.NewV4().Bytes())
-	secret, ok = GenerateSecret(appid)
+	secret, ok = internalGenerateSecret(appid)
 
 	// Assign to a persisted user identified by userID
 	db, err = sql.Open("sqlite3", "../auth.db")
 	if err != nil {
 		ok = false
+		log.Println("Could not open ../auth.db")
 
 		return
 	}
@@ -36,6 +38,7 @@ func GenerateApp(userID string) (appid string, secret string, ok bool) {
 
 	if err != nil {
 		ok = false
+		log.Printf("Could not prepare insert statement. %s", err.Error())
 
 		return
 	}
@@ -45,6 +48,7 @@ func GenerateApp(userID string) (appid string, secret string, ok bool) {
 
 	if err != nil {
 		ok = false
+		log.Println("Could not insert into app")
 
 		return
 	}
@@ -55,47 +59,35 @@ func GenerateApp(userID string) (appid string, secret string, ok bool) {
 
 // GenerateSecret generates a random secret for every invocation
 func GenerateSecret(appid string) (secret string, ok bool) {
-	var err interface{}
+	secret, ok = internalGenerateSecret(appid)
+
+	if !ok {
+		return
+	}
+
+	var err error
 	var db *sql.DB
 	var stmt *sql.Stmt
 
-	fmt.Printf("Generating secret for appid %s...\n", appid)
-
-	hd := hashids.NewData()
-	hd.Salt = appid
-	hd.MinLength = 16
-	h, _ := hashids.NewWithData(hd)
-
-	randomList := make([]int, 4)
-	for i := 0; i < 4; i++ {
-		randomList[i] = rand.Int()
-	}
-
-	secret, _ = h.Encode(randomList)
-
-	db, err = sql.Open("sqlite3", "../auth.db")
-	if err != nil {
+	if db, err = sql.Open("sqlite3", "../auth.db"); err != nil {
+		log.Println("Could not open ../auth.db. " + err.Error())
 		ok = false
-
 		return
 	}
 	defer db.Close()
 
-	stmt, err = db.Prepare("UPDATE apps SET secret = ? WHERE appid = ?)")
-	if err != nil {
+	if stmt, err = db.Prepare("UPDATE apps SET secret = ? WHERE appid = ?"); err != nil {
+		log.Println("Could not prepare UPDATE statement. " + err.Error())
 		ok = false
-
 		return
 	}
 
-	_, err = stmt.Exec(secret, appid)
-	if err != nil {
+	if _, err = stmt.Exec(secret, appid); err != nil {
+		log.Println("Could not execute UPDATE statement. " + err.Error())
 		ok = false
-
 		return
 	}
 
-	ok = true
 	return
 }
 
@@ -125,4 +117,23 @@ func Authenticate(appid string, secret string) (string, bool) {
 	}
 
 	return userID, true
+}
+
+func internalGenerateSecret(appid string) (secret string, ok bool) {
+	fmt.Printf("Generating secret for appid %s...\n", appid)
+
+	hd := hashids.NewData()
+	hd.Salt = appid
+	hd.MinLength = 16
+	h, _ := hashids.NewWithData(hd)
+
+	randomList := make([]int, 4)
+	for i := 0; i < 4; i++ {
+		randomList[i] = rand.Int()
+	}
+
+	secret, _ = h.Encode(randomList)
+
+	ok = true
+	return
 }
