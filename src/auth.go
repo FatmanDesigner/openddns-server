@@ -2,6 +2,7 @@ package main
 
 // GenerateApp generates new pair of appid and client secret
 import (
+	"crypto/sha1"
 	"database/sql"
 	"encoding/hex"
 	"fmt"
@@ -43,8 +44,8 @@ func GenerateApp(userID string) (appid string, secret string, ok bool) {
 		return
 	}
 
-	// TODO: Has secret prior to saving to DB
-	_, err = stmt.Exec(appid, secret, userID)
+	secretHashed := hex.EncodeToString(sha1.New().Sum([]byte(secret)))
+	_, err = stmt.Exec(appid, secretHashed, userID)
 
 	if err != nil {
 		ok = false
@@ -82,7 +83,8 @@ func GenerateSecret(appid string) (secret string, ok bool) {
 		return
 	}
 
-	if _, err = stmt.Exec(secret, appid); err != nil {
+	secretHashed := hex.EncodeToString(sha1.New().Sum([]byte(secret)))
+	if _, err = stmt.Exec(secretHashed, appid); err != nil {
 		log.Println("Could not execute UPDATE statement. " + err.Error())
 		ok = false
 		return
@@ -104,7 +106,8 @@ func Authenticate(appid string, secret string) (string, bool) {
 	}
 	defer db.Close()
 
-	row = db.QueryRow("SELECT user_id FROM apps WHERE appid = ? AND secret = ?", appid, secret)
+	secretHashed := hex.EncodeToString(sha1.New().Sum([]byte(secret)))
+	row = db.QueryRow("SELECT user_id FROM apps WHERE appid = ? AND secret = ?", appid, secretHashed)
 
 	var scanned string
 	if row != nil {
