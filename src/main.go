@@ -22,6 +22,8 @@ func main() {
 		httpPort = 9000
 	}
 
+	db := InitDB("../auth.db")
+	defer db.Close()
 	fmt.Printf("Starting OpenDDNS Server...\n- DNS Server at port %d\n- HTTP Server at port %d\n", dnsPort, httpPort)
 
 	// Execute HTTP
