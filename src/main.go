@@ -1,14 +1,16 @@
 package main
 
 import (
-	"fmt"
+	"log"
 	"os"
+	"path"
 	"strconv"
 	"sync"
 )
 
 func main() {
 	var dnsPort, httpPort int
+	var dbString string
 
 	if _, ok := os.LookupEnv("DNS_PORT"); ok {
 		dnsPort, _ = strconv.Atoi(os.Getenv("DNS_PORT"))
@@ -22,9 +24,20 @@ func main() {
 		httpPort = 9000
 	}
 
-	db := InitDB("../auth.db")
+	if _, ok := os.LookupEnv("DB_STRING"); ok {
+		dbString = os.Getenv("DB_STRING")
+	} else {
+		pwd, _ := os.Getwd()
+		dbString = path.Join(pwd, "auth.db")
+	}
+
+	db := InitDB(dbString)
+	if db == nil {
+		log.Printf("Could not open DB %s", dbString)
+		return
+	}
 	defer db.Close()
-	fmt.Printf("Starting OpenDDNS Server...\n- DNS Server at port %d\n- HTTP Server at port %d\n", dnsPort, httpPort)
+	log.Printf("Starting OpenDDNS Server...\n- DNS Server at port %d\n- HTTP Server at port %d\n", dnsPort, httpPort)
 
 	// Execute HTTP
 	var wg sync.WaitGroup

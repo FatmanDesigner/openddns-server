@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
@@ -164,7 +165,7 @@ func (self *HttpServer) oauthGithubCallback(res http.ResponseWriter, req *http.R
 		return
 	}
 
-	GitHubUserID := string([]byte(*userProfile["id"]))
+	GitHubUserID := fmt.Sprintf("github:%s", string([]byte(*userProfile["id"])))
 	log.Printf("Unmarshaled UserID: %s", GitHubUserID)
 
 	log.Printf("User profile: User Login = %s User ID = %s",

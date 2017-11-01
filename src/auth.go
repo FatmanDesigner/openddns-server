@@ -23,16 +23,13 @@ type Auth struct {
 func (self *Auth) GenerateApp(userID string) (appid string, secret string, ok bool) {
 	log.Println("Generating appid and secret...")
 
-	db := self.DB
 	var err error
 	var stmt *sql.Stmt
 
 	appid = hex.EncodeToString(uuid.NewV4().Bytes())
 	secret, ok = internalGenerateSecret(appid)
 
-	stmt, err = db.Prepare("INSERT INTO apps (appid, secret, user_id) VALUES (?, ?, ?)")
-
-	if err != nil {
+	if stmt, err = self.DB.Prepare("INSERT INTO apps (appid, secret, user_id) VALUES (?, ?, ?)"); err != nil {
 		ok = false
 		log.Printf("Could not prepare insert statement. %s", err.Error())
 

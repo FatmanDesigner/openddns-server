@@ -14,11 +14,11 @@ func InitDB(filepath string) *sql.DB {
 	var err error
 
 	if db, err = sql.Open("sqlite3", filepath); err != nil {
-		log.Printf("Could not open DB: %s\n", filepath)
+		log.Printf("LINE 17: Could not open DB. %s\n", err.Error())
 		return nil
 	}
 
-	if stmt, err = db.Prepare("CREATE TABLE `apps` ( `appid` TEXT, `secret` TEXT, `user_id` TEXT, PRIMARY KEY(`appid`) )"); err != nil {
+	if stmt, err = db.Prepare("CREATE TABLE if not exists `apps` ( `appid` TEXT, `secret` TEXT, `user_id` TEXT, PRIMARY KEY(`appid`) )"); err != nil {
 		defer db.Close()
 		return nil
 	}
