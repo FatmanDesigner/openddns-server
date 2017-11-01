@@ -106,7 +106,8 @@ func Authenticate(appid string, secret string) (string, bool) {
 	}
 	defer db.Close()
 
-	row = db.QueryRow("SELECT user_id FROM apps WHERE appid = ? AND secret = ?", appid, secret)
+	secretHashed := hex.EncodeToString(sha1.New().Sum([]byte(secret)))
+	row = db.QueryRow("SELECT user_id FROM apps WHERE appid = ? AND secret = ?", appid, secretHashed)
 
 	var scanned string
 	if row != nil {
