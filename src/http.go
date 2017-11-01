@@ -2,7 +2,9 @@ package main
 
 import (
 	"bytes"
+	"database/sql"
 	"encoding/json"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
@@ -12,6 +14,10 @@ import (
 	"strings"
 )
 
+type HttpServer struct {
+	DB *sql.DB
+}
+
 type OAuth struct {
 	AccessToken string `json:"access_token"`
 	TokenType   string `json:"token_type"`
@@ -19,12 +25,12 @@ type OAuth struct {
 }
 
 // HttpServe OpenDDNS server at a given port
-func HttpServe(port int) {
+func (self *HttpServer) HttpServe(port int) {
 	log.Printf("Serving on port %d", port)
 
-	http.HandleFunc("/ping", pingHandler)
-	http.HandleFunc("/api/generate-secret", generateSecretHandler)
-	http.HandleFunc("/oauth/github", oauthGithubCallback)
+	http.HandleFunc("/ping", self.pingHandler)
+	http.HandleFunc("/api/generate-secret", self.generateSecretHandler)
+	http.HandleFunc("/oauth/github", self.oauthGithubCallback)
 
 	fs := http.FileServer(http.Dir("/Users/khanhhua/dev/project-openddns/open-ddns-server/web-ui/dist"))
 	http.Handle("/assets/", fs)
@@ -33,7 +39,7 @@ func HttpServe(port int) {
 	http.ListenAndServe(":"+strconv.Itoa(port), nil)
 }
 
-func pingHandler(res http.ResponseWriter, req *http.Request) {
+func (self *HttpServer) pingHandler(res http.ResponseWriter, req *http.Request) {
 	if req.Method != "POST" {
 		res.WriteHeader(http.StatusBadRequest)
 		io.WriteString(res, "Bad Request")
@@ -84,11 +90,11 @@ func pingHandler(res http.ResponseWriter, req *http.Request) {
 	io.WriteString(res, "OK")
 }
 
-func generateSecretHandler(res http.ResponseWriter, req *http.Request) {
+func (self *HttpServer) generateSecretHandler(res http.ResponseWriter, req *http.Request) {
 	io.WriteString(res, "OK")
 }
 
-func oauthGithubCallback(res http.ResponseWriter, req *http.Request) {
+func (self *HttpServer) oauthGithubCallback(res http.ResponseWriter, req *http.Request) {
 	if req.Method != "GET" {
 		res.WriteHeader(http.StatusMethodNotAllowed)
 		return
@@ -159,13 +165,14 @@ func oauthGithubCallback(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	GitHubUserID := string([]byte(*userProfile["id"]))
+	GitHubUserID := fmt.Sprintf("github:%s", string([]byte(*userProfile["id"])))
 	log.Printf("Unmarshaled UserID: %s", GitHubUserID)
 
 	log.Printf("User profile: User Login = %s User ID = %s",
 		string([]byte(*userProfile["login"])), GitHubUserID)
 
-	_, _, ok := GenerateApp(string(GitHubUserID))
+	auth := &Auth{DB: self.DB}
+	_, _, ok := auth.GenerateApp(string(GitHubUserID))
 	if !ok {
 		res.WriteHeader(http.StatusBadRequest)
 		io.WriteString(res, "Could not create appid and secret")
