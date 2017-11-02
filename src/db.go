@@ -9,12 +9,14 @@ import (
 
 // InitDB returns a pointer to DB with tables fully structured
 func InitDB(filepath string) *sql.DB {
+	log.Printf("Initializing DB %s", filepath)
+
 	var db *sql.DB
 	var stmt *sql.Stmt
 	var err error
 
 	if db, err = sql.Open("sqlite3", filepath); err != nil {
-		log.Printf("LINE 17: Could not open DB. %s\n", err.Error())
+		log.Printf("Could not open DB. %s\n", err.Error())
 		return nil
 	}
 

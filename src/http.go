@@ -10,6 +10,8 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 )
@@ -32,7 +34,12 @@ func (self *HttpServer) HttpServe(port int) {
 	http.HandleFunc("/api/generate-secret", self.generateSecretHandler)
 	http.HandleFunc("/oauth/github", self.oauthGithubCallback)
 
-	fs := http.FileServer(http.Dir("/Users/khanhhua/dev/project-openddns/open-ddns-server/web-ui/dist"))
+	staticRoot, err := filepath.Abs(os.Getenv("STATIC_ROOT"))
+	if err != nil {
+		log.Fatal("Could not start HTTP Server. Invalid STATIC_ROOT")
+	}
+	log.Printf("Static root: %s", staticRoot)
+	fs := http.FileServer(http.Dir(staticRoot))
 	http.Handle("/assets/", fs)
 	http.Handle("/", fs)
 
@@ -107,8 +114,8 @@ func (self *HttpServer) oauthGithubCallback(res http.ResponseWriter, req *http.R
 	// Interacting with GitHub OAuth get access token
 	accessTokenURL := "https://github.com/login/oauth/access_token"
 	data := map[string]string{
-		"client_id":     "4b4ec20bb4bb4d306500",
-		"client_secret": "caa8824df01a9538a85234b3e71ae3a19f873e3c",
+		"client_id":     os.Getenv("GH_CLIENT_ID"),
+		"client_secret": os.Getenv("GH_CLIENT_SECRET"),
 		"code":          code,
 	}
 	body, _ := json.Marshal(data)

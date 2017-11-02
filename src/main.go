@@ -1,58 +1,89 @@
 package main
 
 import (
+	"database/sql"
 	"log"
 	"os"
-	"path"
+	"path/filepath"
 	"strconv"
 	"sync"
+
+	_ "github.com/joho/godotenv/autoload"
 )
 
 func main() {
-	var dnsPort, httpPort int
-	var dbString string
+	var dnsPort, httpPort, dbString, staticRoot string
+	dnsPort = "53"
+	httpPort = "9000"
+	staticRoot = "./web-ui/dist"
 
-	if _, ok := os.LookupEnv("DNS_PORT"); ok {
-		dnsPort, _ = strconv.Atoi(os.Getenv("DNS_PORT"))
-	} else {
-		dnsPort = 53
+	configs := map[string]*string{
+		"DNS_PORT":         &dnsPort,
+		"HTTP_PORT":        &httpPort,
+		"DB_STRING":        &dbString,
+		"STATIC_ROOT":      &staticRoot,
+		"GH_CLIENT_ID":     nil,
+		"GH_CLIENT_SECRET": nil}
+	if !ensureEnvParams(configs) {
+		log.Fatal("Could not ensure env params required. Exiting...")
 	}
 
-	if _, ok := os.LookupEnv("HTTP_PORT"); ok {
-		httpPort, _ = strconv.Atoi(os.Getenv("HTTP_PORT"))
+	var db *sql.DB
+	if absoluteFilePath, err := filepath.Abs(dbString); err == nil {
+		db = InitDB(absoluteFilePath)
+		if db == nil {
+			log.Fatalf("Could not open DB %s", dbString)
+			return
+		}
+		defer db.Close()
 	} else {
-		httpPort = 9000
-	}
-
-	if _, ok := os.LookupEnv("DB_STRING"); ok {
-		dbString = os.Getenv("DB_STRING")
-	} else {
-		pwd, _ := os.Getwd()
-		dbString = path.Join(pwd, "auth.db")
-	}
-
-	db := InitDB(dbString)
-	if db == nil {
-		log.Printf("Could not open DB %s", dbString)
+		log.Fatal(err.Error())
 		return
 	}
-	defer db.Close()
-	log.Printf("Starting OpenDDNS Server...\n- DNS Server at port %d\n- HTTP Server at port %d\n", dnsPort, httpPort)
+
+	log.Printf("Starting OpenDDNS Server...\n"+
+		"- DNS Server at port %s\n"+
+		"- HTTP Server at port %s\n", dnsPort, httpPort)
 
 	// Execute HTTP
 	var wg sync.WaitGroup
 	wg.Add(2)
 
 	go func() {
-
 		server := &HttpServer{DB: db}
-		server.HttpServe(httpPort)
+		if port, err := strconv.Atoi(httpPort); err == nil {
+			server.HttpServe(port)
+		}
 		wg.Done()
 	}()
 	go func() {
-		DnsServe(dnsPort)
+		if port, err := strconv.Atoi(dnsPort); err == nil {
+			DnsServe(port)
+		}
 		wg.Done()
 	}()
 
 	wg.Wait()
+}
+
+func ensureEnvParams(configs map[string]*string) (ok bool) {
+	ok = true
+	for key := range configs {
+		if value, found := os.LookupEnv(key); found && len(value) != 0 {
+			if configs[key] != nil {
+				*configs[key] = value
+				log.Printf("Env param %s applied %s", key, value)
+				ok = ok && true
+			}
+		} else if len(*configs[key]) == 0 {
+			log.Printf("Env param %s not found", key)
+			ok = false
+		} else {
+			os.Setenv(key, *configs[key])
+			log.Printf("Env param %s has been defaulted to %s", key, *configs[key])
+			ok = ok && true
+		}
+	}
+
+	return
 }
