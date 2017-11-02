@@ -9,6 +9,8 @@ import (
 
 // InitDB returns a pointer to DB with tables fully structured
 func InitDB(filepath string) *sql.DB {
+	log.Printf("Initializing DB %s", filepath)
+
 	var db *sql.DB
 	var stmt *sql.Stmt
 	var err error

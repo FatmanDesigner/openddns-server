@@ -11,6 +11,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 )
@@ -33,7 +34,11 @@ func (self *HttpServer) HttpServe(port int) {
 	http.HandleFunc("/api/generate-secret", self.generateSecretHandler)
 	http.HandleFunc("/oauth/github", self.oauthGithubCallback)
 
-	staticRoot := os.Getenv("STATIC_ROOT")
+	staticRoot, err := filepath.Abs(os.Getenv("STATIC_ROOT"))
+	if err != nil {
+		log.Fatal("Could not start HTTP Server. Invalid STATIC_ROOT")
+	}
+	log.Printf("Static root: %s", staticRoot)
 	fs := http.FileServer(http.Dir(staticRoot))
 	http.Handle("/assets/", fs)
 	http.Handle("/", fs)
