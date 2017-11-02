@@ -187,6 +187,6 @@ func (self *HttpServer) oauthGithubCallback(res http.ResponseWriter, req *http.R
 		return
 	}
 
-	res.WriteHeader(http.StatusOK)
-	io.WriteString(res, "OK")
+	// Redirect to control panel
+	http.Redirect(res, req, "/#/panel", 301)
 }

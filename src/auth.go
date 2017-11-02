@@ -19,16 +19,28 @@ type Auth struct {
 
 // - appid is to be recorded in DNS TXT record openddns_appid=appid
 // - secret is to authorize IP changes
-func (self *Auth) GenerateApp(userID string) (appid string, secret string, ok bool) {
-	log.Println("Generating appid and secret...")
-
+func (instance *Auth) GenerateApp(userID string) (appid string, secret string, ok bool) {
 	var err error
 	var stmt *sql.Stmt
+	var row *sql.Row
+
+	log.Printf("Looking for user %s", userID)
+	row = instance.DB.QueryRow("SELECT user_id FROM apps WHERE user_id = ?", userID)
+	var scanned string
+
+	if err = row.Scan(&scanned); err == nil {
+		ok = true
+		log.Printf("No op. UserID already has appid: %s", scanned)
+
+		return
+	}
+
+	log.Println("Generating appid and secret...")
 
 	appid = hex.EncodeToString(uuid.NewV4().Bytes())
 	secret, ok = internalGenerateSecret(appid)
 
-	if stmt, err = self.DB.Prepare("INSERT INTO apps (appid, secret, user_id) VALUES (?, ?, ?)"); err != nil {
+	if stmt, err = instance.DB.Prepare("INSERT INTO apps (appid, secret, user_id) VALUES (?, ?, ?)"); err != nil {
 		ok = false
 		log.Printf("Could not prepare insert statement. %s", err.Error())
 
@@ -50,7 +62,7 @@ func (self *Auth) GenerateApp(userID string) (appid string, secret string, ok bo
 }
 
 // GenerateSecret generates a random secret for every invocation
-func (self *Auth) GenerateSecret(appid string) (secret string, ok bool) {
+func (instance *Auth) GenerateSecret(appid string) (secret string, ok bool) {
 	secret, ok = internalGenerateSecret(appid)
 
 	if !ok {
@@ -58,7 +70,7 @@ func (self *Auth) GenerateSecret(appid string) (secret string, ok bool) {
 	}
 
 	var err error
-	var db *sql.DB = self.DB
+	var db *sql.DB = instance.DB
 	var stmt *sql.Stmt
 
 	if stmt, err = db.Prepare("UPDATE apps SET secret = ? WHERE appid = ?"); err != nil {
@@ -78,10 +90,10 @@ func (self *Auth) GenerateSecret(appid string) (secret string, ok bool) {
 }
 
 // Authenticate authenticate appid to be modified using secret
-func (self *Auth) Authenticate(appid string, secret string) (string, bool) {
+func (instance *Auth) Authenticate(appid string, secret string) (string, bool) {
 	var userID string = ""
 	var err error
-	var db *sql.DB = self.DB
+	var db *sql.DB = instance.DB
 	var row *sql.Row
 
 	secretHashed := hex.EncodeToString(sha1.New().Sum([]byte(secret)))
