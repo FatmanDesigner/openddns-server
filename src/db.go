@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"log"
 
-	_ "github.com/mattn/go-sqlite3"
+	_ "github.com/mxk/go-sqlite/sqlite3"
 )
 
 // DomainEntry is a domain entry

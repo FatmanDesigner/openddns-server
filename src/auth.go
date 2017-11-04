@@ -8,7 +8,6 @@ import (
 	"log"
 	"math/rand"
 
-	_ "github.com/mattn/go-sqlite3"
 	uuid "github.com/satori/go.uuid"
 	hashids "github.com/speps/go-hashids"
 )
