@@ -35,7 +35,7 @@ func (self *HttpServer) HttpServe(port int) {
 
 	http.HandleFunc("/ping", self.pingHandler)
 	http.HandleFunc("/api/generate-secret", self.generateSecretHandler)
-	http.HandleFunc("/api/domains", self.domainsHandler)
+	http.HandleFunc("/api/rest/domainEntries", self.domainsHandler)
 	http.HandleFunc("/oauth/github", self.oauthGithubCallback)
 
 	staticRoot, err := filepath.Abs(os.Getenv("STATIC_ROOT"))

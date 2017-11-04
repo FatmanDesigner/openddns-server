@@ -11,7 +11,7 @@ import (
 type DomainEntry struct {
 	DomainName string `json:"domainName"`
 	IP         string `json:"ip"`
-	UpdatedOn  int    `json:"updatedOn"`
+	UpdatedAt  int    `json:"updatedAt"`
 }
 
 // InitDB returns a pointer to DB with tables fully structured
@@ -33,7 +33,7 @@ func InitDB(filepath string) *sql.DB {
 	}
 
 	// CREATE TABLE `domains`
-	if err = createTable(db, "CREATE TABLE if not exists `domains` ( `domain_name` TEXT NOT NULL, `ip` TEXT NOT NULL, `updated_on` INTEGER NOT NULL, `owner_id` TEXT NOT NULL, PRIMARY KEY(`domain_name`) )"); err != nil {
+	if err = createTable(db, "CREATE TABLE if not exists `domains` ( `domain_name` TEXT NOT NULL, `ip` TEXT NOT NULL, `updated_at` INTEGER NOT NULL, `owner_id` TEXT NOT NULL, PRIMARY KEY(`domain_name`) )"); err != nil {
 		defer db.Close()
 		return nil
 	}
@@ -63,7 +63,7 @@ func QueryDomainEntriesByUserID(db *sql.DB, userID string) ([]DomainEntry, error
 	var rows *sql.Rows
 	var err error
 
-	rows, err = db.Query("SELECT domain_name, ip, updated_on FROM domains WHERE owner_id = ?", userID)
+	rows, err = db.Query("SELECT domain_name, ip, updated_at FROM domains WHERE owner_id = ?", userID)
 	if err != nil {
 		return nil, err
 	}
@@ -73,7 +73,7 @@ func QueryDomainEntriesByUserID(db *sql.DB, userID string) ([]DomainEntry, error
 
 	for rows.Next() {
 		domainEntry := DomainEntry{}
-		if err := rows.Scan(&domainEntry.DomainName, &domainEntry.IP, &domainEntry.UpdatedOn); err != nil {
+		if err := rows.Scan(&domainEntry.DomainName, &domainEntry.IP, &domainEntry.UpdatedAt); err != nil {
 			return nil, err
 		}
 
