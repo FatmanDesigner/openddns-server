@@ -14,6 +14,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	jwt "github.com/dgrijalva/jwt-go"
 	jwtRequest "github.com/dgrijalva/jwt-go/request"
@@ -191,8 +192,28 @@ func (self *HttpServer) oauthGithubCallback(res http.ResponseWriter, req *http.R
 		return
 	}
 
-	// Redirect to control panel
-	http.Redirect(res, req, "/#/panel", 301)
+	// Redirect to control panel along with access token in cookie
+	log.Println("Generate JWT token as a cookie")
+	jwtToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.StandardClaims{
+		Subject: GitHubUserID,
+	})
+	secret := []byte(os.Getenv("JWT_SECRET"))
+	if jwtSignedString, err := jwtToken.SignedString(secret); err == nil {
+		cookie := &http.Cookie{
+			Name:    "accessToken",
+			Value:   jwtSignedString,
+			Path:    "/",
+			Expires: time.Now().Add(time.Duration(3600) * time.Second)}
+		http.SetCookie(res, cookie)
+
+		http.Redirect(res, req, "/#/panel", 301)
+		return
+	} else {
+		res.WriteHeader(http.StatusInternalServerError)
+		io.WriteString(res, "Could not generate signed jwt. Error: "+err.Error())
+
+		return
+	}
 }
 
 func (self *HttpServer) domainsHandler(res http.ResponseWriter, req *http.Request) {
@@ -246,11 +267,10 @@ func (self *HttpServer) domainsHandler(res http.ResponseWriter, req *http.Reques
 	}
 
 	type DomainEntryResponse struct {
-		OK            bool          `json:"ok"`
 		DomainEntries []DomainEntry `json:"domainEntries"`
 	}
 
-	if jsonData, err = json.Marshal(DomainEntryResponse{true, domainEntries}); err != nil {
+	if jsonData, err = json.Marshal(DomainEntryResponse{domainEntries}); err != nil {
 		res.WriteHeader(http.StatusInternalServerError)
 		io.WriteString(res, "Error: "+err.Error())
 		return
