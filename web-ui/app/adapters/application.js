@@ -2,7 +2,19 @@ import DS from 'ember-data';
 
 export default DS.RESTAdapter.extend({
   namespace: '/api/rest',
-  headers: {
-    Authorization: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJnaXRodWI6MzkyNjM0MCJ9.CPJ9LU6hO4hWvLH8tMbu70qEGSIX-OOoOWJkSID8Ao0'
-  }
+  headers: Ember.computed(function () {
+    if (!document.cookie.length) {
+      return '';
+    }
+
+    var rgx = /accessToken=(.+);?/g;
+    var match = rgx.exec(document.cookie);
+    if (match && match[1]) {
+      return {
+        Authorization: 'Bearer ' + match[1]
+      }
+    } else {
+      return {};
+    }
+  })
 });
