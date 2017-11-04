@@ -6,10 +6,7 @@ cd web-ui
 
 cd ..
 
-echo "Building openddnsd-darwin..."
-env GOOS=darwin GOARCH=amd64 go build -o bin/openddnsd-darwin src/*
-
-echo "Building openddnsd-linux..."
-env GOOS=linux GOARCH=amd64 go build -o bin/openddnsd-linux src/*
+echo "Building openddnsd..."
+go build -o bin/openddnsd src/*
 
 echo "Done!"
