@@ -14,6 +14,9 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+
+	jwt "github.com/dgrijalva/jwt-go"
+	jwtRequest "github.com/dgrijalva/jwt-go/request"
 )
 
 type HttpServer struct {
@@ -32,6 +35,7 @@ func (self *HttpServer) HttpServe(port int) {
 
 	http.HandleFunc("/ping", self.pingHandler)
 	http.HandleFunc("/api/generate-secret", self.generateSecretHandler)
+	http.HandleFunc("/api/domains", self.domainsHandler)
 	http.HandleFunc("/oauth/github", self.oauthGithubCallback)
 
 	staticRoot, err := filepath.Abs(os.Getenv("STATIC_ROOT"))
@@ -189,4 +193,69 @@ func (self *HttpServer) oauthGithubCallback(res http.ResponseWriter, req *http.R
 
 	// Redirect to control panel
 	http.Redirect(res, req, "/#/panel", 301)
+}
+
+func (self *HttpServer) domainsHandler(res http.ResponseWriter, req *http.Request) {
+	if req.Method != "GET" {
+		res.WriteHeader(http.StatusBadRequest)
+
+		return
+	}
+
+	var err error
+	var userID string
+	var domainEntries []DomainEntry
+	var jsonData []byte
+	var token *jwt.Token
+
+	log.Println("Handling API domains...")
+	secret := []byte(os.Getenv("JWT_SECRET"))
+
+	if len(req.Header.Get("Authorization")) == 0 {
+		res.WriteHeader(http.StatusUnauthorized)
+		io.WriteString(res, "Missing authorization header")
+		return
+	}
+
+	extractor := jwtRequest.AuthorizationHeaderExtractor
+	token, err = jwtRequest.ParseFromRequest(req, extractor, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
+		}
+		return secret, nil
+	})
+
+	if err != nil {
+		res.WriteHeader(http.StatusUnauthorized)
+		io.WriteString(res, "Parse Error: "+err.Error())
+		return
+	}
+
+	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
+		userID = claims["sub"].(string)
+	} else {
+		res.WriteHeader(http.StatusUnauthorized)
+		io.WriteString(res, "Invalid Claims")
+		return
+	}
+
+	if domainEntries, err = QueryDomainEntriesByUserID(self.DB, userID); err != nil {
+		res.WriteHeader(http.StatusInternalServerError)
+		io.WriteString(res, "Error: "+err.Error())
+		return
+	}
+
+	type DomainEntryResponse struct {
+		OK            bool          `json:"ok"`
+		DomainEntries []DomainEntry `json:"domainEntries"`
+	}
+
+	if jsonData, err = json.Marshal(DomainEntryResponse{true, domainEntries}); err != nil {
+		res.WriteHeader(http.StatusInternalServerError)
+		io.WriteString(res, "Error: "+err.Error())
+		return
+	}
+
+	res.WriteHeader(http.StatusOK)
+	res.Write(jsonData)
 }
