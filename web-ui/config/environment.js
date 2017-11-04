@@ -30,6 +30,7 @@ module.exports = function(environment) {
     // ENV.APP.LOG_TRANSITIONS = true;
     // ENV.APP.LOG_TRANSITIONS_INTERNAL = true;
     // ENV.APP.LOG_VIEW_LOOKUPS = true;
+    ENV['GH_CLIENT_ID'] = '4b4ec20bb4bb4d306500';
   }
 
   if (environment === 'test') {
@@ -45,6 +46,7 @@ module.exports = function(environment) {
 
   if (environment === 'production') {
     // here you can enable a production-specific feature
+    ENV['GH_CLIENT_ID'] = '273751a97ce6eabc5b55';
   }
 
   return ENV;

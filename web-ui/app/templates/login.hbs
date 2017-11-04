@@ -5,7 +5,7 @@
       <h2>Login</h2>
 
       <form class="ui form">
-        <a class="ui button" href="https://github.com/login/oauth/authorize?client_id=4b4ec20bb4bb4d306500">
+        <a class="ui button" href="https://github.com/login/oauth/authorize?client_id={{read-env 'GH_CLIENT_ID'}}">
           <i class="github icon"></i> Login with GitHub
         </a>
       </form>
@@ -17,5 +17,6 @@
       OpenDDNS requires users to understand the basics of DNS management and
       home internet router configuration.
     </p>
+    <p>Version: {{read-env 'APP.version'}}</p>
   </div>
 </div>
