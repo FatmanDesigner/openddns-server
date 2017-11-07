@@ -93,10 +93,24 @@ func (self *HttpServer) pingHandler(res http.ResponseWriter, req *http.Request) 
 
 	// TODO: Validate domainName as per RFC 1034 - IETF (see https://www.ietf.org/rfc/rfc1034.txt)
 	// TODO: Take into account req.Headers().Get("X-Forwarded-For")
+	// TODO: Validate domain ownership using a TXT record openddns_appid=appid
 	// .. when router is behind proxies
 	host, _, _ := net.SplitHostPort(req.RemoteAddr)
-	ip := net.ParseIP(host)
-	Register(domainName, ip.String())
+	ipString := net.ParseIP(host).String()
+
+	ownerID, err := QueryDomainOwnerByDomainName(self.DB, domainName)
+	if err != nil {
+		res.WriteHeader(http.StatusBadRequest)
+		io.WriteString(res, "Invalid ownerID")
+		return
+	}
+
+	if err := UpsertDomainEntry(self.DB, ownerID, appid, domainName, ipString); err != nil {
+		res.WriteHeader(http.StatusBadRequest)
+		io.WriteString(res, "Invalid ownerID")
+		return
+	}
+	Register(domainName, ipString)
 
 	res.WriteHeader(http.StatusOK)
 	io.WriteString(res, "OK")

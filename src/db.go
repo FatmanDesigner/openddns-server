@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"log"
+	"time"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -33,7 +34,7 @@ func InitDB(filepath string) *sql.DB {
 	}
 
 	// CREATE TABLE `domains`
-	if err = createTable(db, "CREATE TABLE if not exists `domains` ( `domain_name` TEXT NOT NULL, `ip` TEXT NOT NULL, `updated_at` INTEGER NOT NULL, `owner_id` TEXT NOT NULL, PRIMARY KEY(`domain_name`) )"); err != nil {
+	if err = createTable(db, "CREATE TABLE if not exists `domains` ( `domain_name` TEXT NOT NULL, `ip` TEXT NOT NULL, `updated_at` INTEGER NOT NULL, `owner_id` TEXT NOT NULL, `appid` TEXT NOT NULL, PRIMARY KEY(`domain_name`) )"); err != nil {
 		defer db.Close()
 		return nil
 	}
@@ -54,6 +55,21 @@ func createTable(db *sql.DB, createStatement string) error {
 	}
 
 	return nil
+}
+
+func QueryDomainOwnerByDomainName(db *sql.DB, domainName string) (string, error) {
+	log.Printf("Querying domain owner by domainName=%s", domainName)
+
+	var row *sql.Row
+	var err error
+	var ownerID string
+
+	row = db.QueryRow("SELECT owner_id FROM domains WHERE domain_name = ?", domainName)
+	if err = row.Scan(&ownerID); err != nil {
+		return "", err
+	}
+
+	return ownerID, nil
 }
 
 // QueryDomainEntriesByUserID gets all domain entries by a userID
@@ -81,4 +97,42 @@ func QueryDomainEntriesByUserID(db *sql.DB, userID string) ([]DomainEntry, error
 	}
 
 	return domainEntries, nil
+}
+
+func UpsertDomainEntry(db *sql.DB, ownerID string, appid string, domainName string, domainIP string) error {
+	var row *sql.Row
+	var stmt *sql.Stmt
+	var err error
+	var count int
+
+	row = db.QueryRow("SELECT COUNT(domain_name) FROM domains WHERE domain_name = ?", domainName)
+	if err = row.Scan(&count); err != nil {
+		return err
+	}
+
+	if count > 1 {
+		panic("Database integrity")
+	} else if count == 0 {
+		if stmt, err = db.Prepare("INSERT domains (domain_name, ip, updated_at, owner_id, appid) VALUES (?, ?, ?, ?, ?)"); err != nil {
+			return err
+		}
+
+		updatedAt := time.Now().UnixNano() / 1000000
+		log.Printf("Inserting a new domain entry: domainName=%s, domainIP=%s", domainName, domainIP)
+		if _, err = stmt.Exec(domainName, domainIP, updatedAt, ownerID, appid); err != nil {
+			return err
+		}
+	} else {
+		if stmt, err = db.Prepare("UPDATE domains SET ip=?, updated_at=?, owner_id=?, appid=? WHERE domain_name = ?"); err != nil {
+			return err
+		}
+
+		updatedAt := time.Now().UnixNano() / 1000000
+		log.Printf("Updating existing domain entry: domainName=%s, domainIP=%s", domainName, domainIP)
+		if _, err = stmt.Exec(domainIP, updatedAt, ownerID, appid, domainName); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
