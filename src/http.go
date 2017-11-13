@@ -37,6 +37,7 @@ func (self *HttpServer) HttpServe(port int) {
 	http.HandleFunc("/ping", self.pingHandler)
 	http.HandleFunc("/api/generate-secret", self.generateSecretHandler)
 	http.HandleFunc("/api/rest/domainEntries", self.domainsHandler)
+	http.HandleFunc("/api/rest/appInfo", self.appInfoHandler)
 	http.HandleFunc("/oauth/github", self.oauthGithubCallback)
 
 	staticRoot, err := filepath.Abs(os.Getenv("STATIC_ROOT"))
@@ -104,6 +105,69 @@ func (self *HttpServer) pingHandler(res http.ResponseWriter, req *http.Request) 
 
 func (self *HttpServer) generateSecretHandler(res http.ResponseWriter, req *http.Request) {
 	io.WriteString(res, "OK")
+}
+
+func (self *HttpServer) appInfoHandler(res http.ResponseWriter, req *http.Request) {
+	if req.Method != "GET" {
+		res.WriteHeader(http.StatusBadRequest)
+
+		return
+	}
+
+	log.Println("Handling API app info...")
+	secret := []byte(os.Getenv("JWT_SECRET"))
+
+	if len(req.Header.Get("Authorization")) == 0 {
+		res.WriteHeader(http.StatusUnauthorized)
+		io.WriteString(res, "Missing authorization header")
+		return
+	}
+
+	var err error
+	var userID string
+	var appInfos []AppInfo
+	var jsonData []byte
+	var token *jwt.Token
+
+	extractor := jwtRequest.AuthorizationHeaderExtractor
+	token, err = jwtRequest.ParseFromRequest(req, extractor, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
+		}
+		return secret, nil
+	})
+
+	if err != nil {
+		res.WriteHeader(http.StatusUnauthorized)
+		io.WriteString(res, "Parse Error: "+err.Error())
+		return
+	}
+
+	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
+		userID = claims["sub"].(string)
+	} else {
+		res.WriteHeader(http.StatusUnauthorized)
+		io.WriteString(res, "Invalid Claims")
+		return
+	}
+
+	if appInfos, err = QueryAppInfosUserID(self.DB, userID); err != nil {
+		res.WriteHeader(http.StatusInternalServerError)
+		io.WriteString(res, "Error: "+err.Error())
+		return
+	} else if len(appInfos) == 0 {
+		res.WriteHeader(http.StatusNotFound)
+		io.WriteString(res, "AppInfo not found")
+	}
+
+	if jsonData, err = json.Marshal(appInfos[0]); err != nil {
+		res.WriteHeader(http.StatusInternalServerError)
+		io.WriteString(res, "Error: "+err.Error())
+		return
+	}
+
+	res.WriteHeader(http.StatusOK)
+	res.Write(jsonData)
 }
 
 func (self *HttpServer) oauthGithubCallback(res http.ResponseWriter, req *http.Request) {

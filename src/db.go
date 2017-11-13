@@ -14,6 +14,10 @@ type DomainEntry struct {
 	UpdatedAt  int    `json:"updatedAt"`
 }
 
+type AppInfo struct {
+	AppID string `json:"appid"`
+}
+
 // InitDB returns a pointer to DB with tables fully structured
 func InitDB(filepath string) *sql.DB {
 	log.Printf("Initializing DB %s", filepath)
@@ -81,4 +85,29 @@ func QueryDomainEntriesByUserID(db *sql.DB, userID string) ([]DomainEntry, error
 	}
 
 	return domainEntries, nil
+}
+
+func QueryAppInfosUserID(db *sql.DB, userID string) ([]AppInfo, error) {
+	log.Printf("Querying apps by userID=%s", userID)
+
+	var rows *sql.Rows
+	var err error
+
+	rows, err = db.Query("SELECT appid FROM apps WHERE user_id = ?", userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var appInfos []AppInfo
+	for rows.Next() {
+		appInfo := AppInfo{}
+		if err := rows.Scan(&appInfo.AppID); err != nil {
+			return nil, err
+		}
+
+		appInfos = append(appInfos, appInfo)
+	}
+
+	return appInfos, nil
 }
