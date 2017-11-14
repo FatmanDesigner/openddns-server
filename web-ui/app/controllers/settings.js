@@ -1,25 +1,20 @@
-import Route from '@ember/routing/route';
+import Controller from '@ember/controller';
 import Ember from 'ember';
 
-export default Route.extend({
-  model() {
-    return Ember.$.ajax({
-      url: `/api/rest/appInfo`,
+export default Controller.extend({
+  generateSecretAndHide(appid) {
+    Ember.$.ajax({
+      url: `/api/generate-secret?appid=${appid}`,
       dataType: 'json',
       beforeSend
-    }).promise();
-  },
+    }).promise()
+    .then(({secret}) => {
+      this.set('secret', secret);
 
-  actions: {
-    generateSecret(appid) {
-      console.log('Generating secret...');
-
-      this.controller.generateSecretAndHide(appid);
-    }
-
-    copy(text) {
-      
-    }
+      setTimeout(() => {
+        this.set('secret', null);
+      }, 5000);
+    });
   }
 });
 

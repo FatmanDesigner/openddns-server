@@ -10,17 +10,31 @@
   <div class="twelve wide column">
     <div class="ui list">
       <div class="item">
-        <i class="map marker icon"></i>
         <div class="content">
           <a class="header">Application ID</a>
-          <div class="description">{{model.appid}}</div>
+          <div class="description">
+            <div class="ui icon input">
+              {{input type="text" size=60 value=model.appid readonly=true }}
+              <i class="copy icon" {{action "copy" model.appid}}></i>
+            </div>
+          </div>
         </div>
       </div>
       <div class="item">
-        <i class="map marker icon"></i>
         <div class="content">
           <a class="header">Secret Key</a>
-          <div class="description">Click here to regenerate</div>
+          <div class="description">
+            {{#if secret}}
+            <div class="ui icon input">
+              {{input type="text" size=60 value=secret readonly=true }}
+              <i class="copy icon" {{action "copy" secret}}></i>
+            </div>
+            {{else}}
+            <button {{action 'generateSecret' model.appid}} class="ui primary button">
+              Click here to regenerate
+            </button>
+            {{/if}}
+          </div>
         </div>
       </div>
     </div>

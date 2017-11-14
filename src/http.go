@@ -104,7 +104,75 @@ func (self *HttpServer) pingHandler(res http.ResponseWriter, req *http.Request) 
 }
 
 func (self *HttpServer) generateSecretHandler(res http.ResponseWriter, req *http.Request) {
-	io.WriteString(res, "OK")
+	if req.Method != "GET" {
+		res.WriteHeader(http.StatusBadRequest)
+
+		return
+	}
+
+	log.Println("Handling API app info...")
+	secret := []byte(os.Getenv("JWT_SECRET"))
+
+	if len(req.Header.Get("Authorization")) == 0 {
+		res.WriteHeader(http.StatusUnauthorized)
+		io.WriteString(res, "Missing authorization header")
+		return
+	}
+
+	var err error
+	var userID string
+	var appid string
+	var jsonData []byte
+	var token *jwt.Token
+
+	extractor := jwtRequest.AuthorizationHeaderExtractor
+	token, err = jwtRequest.ParseFromRequest(req, extractor, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
+		}
+		return secret, nil
+	})
+
+	if err != nil {
+		res.WriteHeader(http.StatusUnauthorized)
+		io.WriteString(res, "Parse Error: "+err.Error())
+		return
+	}
+
+	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
+		userID = claims["sub"].(string)
+	} else {
+		res.WriteHeader(http.StatusUnauthorized)
+		io.WriteString(res, "Invalid Claims")
+		return
+	}
+
+	appid = req.URL.Query().Get("appid")
+	if len(appid) == 0 {
+		res.WriteHeader(http.StatusBadRequest)
+		io.WriteString(res, "Missing query param: appid")
+
+		return
+	}
+
+	auth := &Auth{DB: self.DB}
+	if secret, ok := auth.GenerateSecret(userID, appid); ok {
+		if jsonData, err = json.Marshal(AppInfo{AppID: appid, Secret: secret}); err != nil {
+			res.WriteHeader(http.StatusInternalServerError)
+			io.WriteString(res, "Error: "+err.Error())
+
+			return
+		}
+
+		res.WriteHeader(http.StatusOK)
+		res.Write(jsonData)
+
+		return
+	} else {
+		res.WriteHeader(http.StatusInternalServerError)
+		io.WriteString(res, "Could not generate client secret")
+		return
+	}
 }
 
 func (self *HttpServer) appInfoHandler(res http.ResponseWriter, req *http.Request) {

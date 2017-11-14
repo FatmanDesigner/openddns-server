@@ -15,7 +15,8 @@ type DomainEntry struct {
 }
 
 type AppInfo struct {
-	AppID string `json:"appid"`
+	AppID  string `json:"appid"`
+	Secret string `json:"secret,omitempty"`
 }
 
 // InitDB returns a pointer to DB with tables fully structured
