@@ -30,14 +30,17 @@ func TestGenerateSecret(t *testing.T) {
 	defer db.Close()
 	auth := &Auth{DB: db}
 
-	secretA, _ := auth.GenerateSecret("itsalongappid")
+	userID := "khanhhua"
+	appid, _, _ := auth.GenerateApp(userID)
+
+	secretA, _ := auth.GenerateSecret(userID, appid)
 
 	if len(secretA) == 0 {
 		t.Error("secret should be non-empty")
 	}
 	t.Logf("Secret generated for \"itsalongappid\": %s", secretA)
 
-	secretB, _ := auth.GenerateSecret("itsalongappid")
+	secretB, _ := auth.GenerateSecret(userID, appid)
 
 	if len(secretB) == 0 {
 		t.Error("secret should be non-empty")

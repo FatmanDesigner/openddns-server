@@ -61,7 +61,7 @@ func (instance *Auth) GenerateApp(userID string) (appid string, secret string, o
 }
 
 // GenerateSecret generates a random secret for every invocation
-func (instance *Auth) GenerateSecret(appid string) (secret string, ok bool) {
+func (instance *Auth) GenerateSecret(userID string, appid string) (secret string, ok bool) {
 	secret, ok = internalGenerateSecret(appid)
 
 	if !ok {
@@ -72,14 +72,14 @@ func (instance *Auth) GenerateSecret(appid string) (secret string, ok bool) {
 	var db *sql.DB = instance.DB
 	var stmt *sql.Stmt
 
-	if stmt, err = db.Prepare("UPDATE apps SET secret = ? WHERE appid = ?"); err != nil {
+	if stmt, err = db.Prepare("UPDATE apps SET secret = ? WHERE user_id = ? and appid = ?"); err != nil {
 		log.Println("Could not prepare UPDATE statement. " + err.Error())
 		ok = false
 		return
 	}
 
 	secretHashed := hex.EncodeToString(sha1.New().Sum([]byte(secret)))
-	if _, err = stmt.Exec(secretHashed, appid); err != nil {
+	if _, err = stmt.Exec(secretHashed, userID, appid); err != nil {
 		log.Println("Could not execute UPDATE statement. " + err.Error())
 		ok = false
 		return
