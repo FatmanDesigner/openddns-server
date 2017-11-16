@@ -5,7 +5,7 @@ export default Route.extend({
     return this.get('store').findAll('domain-entry');
   },
   actions: {
-    error(error, transition) {
+    error(error, transition) { // eslint-disable-line
       const httpError = error.errors && error.errors.filter(item => item.status==='401');
       if (httpError) {
         this.replaceWith('login')

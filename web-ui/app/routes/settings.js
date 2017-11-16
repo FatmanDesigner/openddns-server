@@ -12,8 +12,6 @@ export default Route.extend({
 
   actions: {
     generateSecret(appid) {
-      console.log('Generating secret...');
-
       this.controller.generateSecretAndHide(appid);
     }
   }
