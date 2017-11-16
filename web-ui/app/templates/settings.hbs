@@ -13,9 +13,11 @@
         <div class="content">
           <a class="header">Application ID</a>
           <div class="description">
-            <div class="ui icon input">
-              {{input type="text" size=60 value=model.appid readonly=true }}
-              <i class="copy icon" {{action "copy" model.appid}}></i>
+            <div class="ui action input">
+              {{input type="text" size=60 value=model.appid readonly=true id="appid" }}
+              {{#copy-button clipboardTarget="#appid" class="ui teal button"}}
+                <i class="copy icon"></i>
+              {{/copy-button}}
             </div>
           </div>
         </div>
@@ -25,9 +27,11 @@
           <a class="header">Secret Key</a>
           <div class="description">
             {{#if secret}}
-            <div class="ui icon input">
-              {{input type="text" size=60 value=secret readonly=true }}
-              <i class="copy icon" {{action "copy" secret}}></i>
+            <div class="ui action input">
+              {{input type="text" size=60 value=secret readonly=true id="secret" }}
+              {{#copy-button clipboardTarget="#secret" class="ui teal button"}}
+                <i class="copy icon"></i>
+              {{/copy-button}}
             </div>
             {{else}}
             <button {{action 'generateSecret' model.appid}} class="ui primary button">

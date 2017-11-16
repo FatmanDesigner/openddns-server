@@ -16,10 +16,6 @@ export default Route.extend({
 
       this.controller.generateSecretAndHide(appid);
     }
-
-    copy(text) {
-      
-    }
   }
 });
 
